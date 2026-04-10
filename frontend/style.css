@@ -358,6 +358,94 @@ tr.critical-cpu td {
     to { transform: translateY(0); opacity: 1; }
 }
 
+/* Tabs System Elements */
+.tabs-nav {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.tab-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.5rem 0.25rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--text-main);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+.tab-content {
+    animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* System Health Banner */
+.health-banner {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background-color: var(--bg-card);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border);
+}
+
+.health-score-ring {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: conic-gradient(var(--success) 100%, var(--bg-main) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--text-main);
+    position: relative;
+    transition: background 0.5s ease;
+}
+
+.health-score-ring::before {
+    content: '';
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    background-color: var(--bg-card);
+    border-radius: 50%;
+}
+
+.health-score-ring span {
+    z-index: 1;
+}
+
+.health-info h3 {
+    margin-bottom: 0.25rem;
+    font-size: 1.125rem;
+}
+
+.health-info p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .header { padding: 1rem; }

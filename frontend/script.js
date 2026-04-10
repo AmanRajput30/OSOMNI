@@ -10,8 +10,10 @@ let processData = [];
 let sortCol = 'cpu_percent';
 let sortDesc = true;
 let searchTerm = '';
+
 let cpuHistory = Array(30).fill(0);
 let memHistory = Array(30).fill(0);
+let netHistory = Array(30).fill(0);
 let startTime = Date.now();
 
 // DOM Elements
@@ -26,14 +28,20 @@ const eGraphMem = document.getElementById('graph-mem');
 const eValDisk = document.getElementById('val-disk');
 const eBarDisk = document.getElementById('bar-disk');
 
+const eValNetUp = document.getElementById('val-net-up');
+const eValNetDown = document.getElementById('val-net-down');
+const eGraphNet = document.getElementById('graph-net');
+
 const eProcessList = document.getElementById('process-list');
 const eProcCount = document.getElementById('proc-count');
 const eSearch = document.getElementById('search-input');
 const eHeaders = document.querySelectorAll('th[data-sort]');
 const eThemeToggle = document.getElementById('theme-toggle');
-const eInsightsBanner = document.getElementById('insights-banner');
-const eInsightText = document.getElementById('insight-text');
+
 const eUptime = document.getElementById('uptime');
+const eHealthScore = document.getElementById('health-score-val');
+const eHealthRing = document.getElementById('health-ring');
+const eRecommendation = document.getElementById('recommendation-text');
 
 // Initialization
 function init() {
@@ -48,11 +56,28 @@ function init() {
 
 // Event Listeners
 function setupEventListeners() {
+    // Tab Navigation
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.style.display = 'none');
+            
+            btn.classList.add('active');
+            const target = btn.getAttribute('data-target');
+            document.getElementById(target).style.display = 'block';
+        });
+    });
+
+    // Process Search
     eSearch.addEventListener('input', (e) => {
         searchTerm = e.target.value.toLowerCase();
         renderTable();
     });
 
+    // Process Sort
     eHeaders.forEach(th => {
         th.addEventListener('click', () => {
             const col = th.getAttribute('data-sort');
@@ -68,6 +93,7 @@ function setupEventListeners() {
         });
     });
 
+    // Theme Toggle
     eThemeToggle.addEventListener('click', () => {
         const currentTh = document.documentElement.getAttribute('data-theme');
         const newTh = currentTh === 'dark' ? 'light' : 'dark';
@@ -120,7 +146,6 @@ async function fetchProcesses() {
         const res = await fetch('/api/processes');
         processData = await res.json();
         renderTable();
-        analyzeInsights();
     } catch (err) {
         console.error("Process Fetch Error:", err);
     }
@@ -128,6 +153,14 @@ async function fetchProcesses() {
 
 // Update UI
 function updateSystemUI(data) {
+    // Health Banner
+    eHealthScore.textContent = data.health_score;
+    eRecommendation.textContent = data.recommendation;
+    let hColor = 'var(--success)';
+    if(data.health_score < 50) hColor = 'var(--danger)';
+    else if(data.health_score < 80) hColor = 'var(--warning)';
+    eHealthRing.style.background = `conic-gradient(${hColor} ${data.health_score}%, var(--bg-main) 0)`;
+
     // CPU
     const cCpu = data.cpu.percent;
     eValCpu.textContent = `CPU Usage: ${cCpu}%`;
@@ -154,13 +187,24 @@ function updateSystemUI(data) {
     eBarMem.className = `progress-fill ${getColorClass(truePercent, 'mem')}`;
     updateGraph(memHistory, truePercent, eGraphMem, getColorClass(truePercent, 'mem'));
 
+    // Network
+    const upSpeed = data.network.upload_speed;
+    const downSpeed = data.network.download_speed;
+    eValNetUp.textContent = `${formatBytes(upSpeed)}/s`;
+    eValNetDown.textContent = `${formatBytes(downSpeed)}/s`;
+    
+    // Convert highest speed relative to 10MB/s (10485760 bytes) for graph percentage scaling
+    const maxSpeed = Math.max(upSpeed, downSpeed);
+    const netPercent = Math.min(100, (maxSpeed / 10485760) * 100);
+    updateGraph(netHistory, netPercent, eGraphNet, '');
+
     // Disk
     const cDisk = data.disk.percent;
     eValDisk.textContent = `${formatBytes(data.disk.used)} / ${formatBytes(data.disk.total)} (${cDisk}%)`;
     eBarDisk.style.width = `${cDisk}%`;
     eBarDisk.className = `progress-fill ${getColorClass(cDisk, 'disk')}`;
 
-    checkAlerts(cCpu, cMem);
+    checkAlerts(cCpu, truePercent);
 }
 
 // Graph Drawing (Canvas API)
@@ -294,23 +338,6 @@ function checkAlerts(cpu, mem) {
     } else if (mem >= MEM_CRIT) {
         showToast(`CRITICAL: Memory usage at ${mem}%`, 'danger');
         lastAlertTime = now;
-    }
-}
-
-function analyzeInsights() {
-    const highCpuProcs = processData.filter(p => (p.cpu_percent || 0) > 30);
-    const highMemProcs = processData.filter(p => (p.memory_percent || 0) > 40);
-    
-    if (highCpuProcs.length > 0) {
-        const top = highCpuProcs[0];
-        eInsightsBanner.style.display = 'flex';
-        eInsightText.textContent = `Anomaly Detected: '${top.name}' is heavily utilizing CPU (${top.cpu_percent.toFixed(1)}%). Consider closing it.`;
-    } else if (highMemProcs.length > 0) {
-        const top = highMemProcs[0];
-        eInsightsBanner.style.display = 'flex';
-        eInsightText.textContent = `Resource Warning: '${top.name}' is hogging memory capabilities (${top.memory_percent.toFixed(1)}%).`;
-    } else {
-        eInsightsBanner.style.display = 'none';
     }
 }
 

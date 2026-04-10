@@ -4,7 +4,12 @@ import time
 # Initialize CPU measurement globally before API starts
 psutil.cpu_percent(interval=None)
 
+last_net_io = psutil.net_io_counters()
+last_net_time = time.time()
+
 def get_system_stats():
+    global last_net_io, last_net_time
+    
     # interval=None calculates CPU utilization since last call
     cpu_percent = psutil.cpu_percent(interval=None)
     
@@ -24,6 +29,37 @@ def get_system_stats():
     true_used = total - available
     true_percent = (true_used / total) * 100
     
+    # Network Tracking
+    current_net_io = psutil.net_io_counters()
+    current_time = time.time()
+    time_delta = current_time - last_net_time
+    
+    if time_delta > 0:
+        upload_speed = (current_net_io.bytes_sent - last_net_io.bytes_sent) / time_delta
+        download_speed = (current_net_io.bytes_recv - last_net_io.bytes_recv) / time_delta
+    else:
+        upload_speed = 0.0
+        download_speed = 0.0
+        
+    last_net_io = current_net_io
+    last_net_time = current_time
+
+    # Primary Intelligent Health Score Math
+    health_score = 100 - (cpu_percent * 0.4 + true_percent * 0.4 + disk.percent * 0.2)
+    health_score = max(0, min(100, health_score)) # Clamp between 0-100
+    
+    # Semantic Recommendation Engine
+    if cpu_percent > 85:
+        recommendation = "High CPU load detected. Monitor top processes in the Processes tab."
+    elif true_percent > 85:
+        recommendation = "Heavy memory pressure. Close unused applications to boost health."
+    elif available < 500 * 1024**2:
+        recommendation = "Warning: Low available memory limits performance stability."
+    elif disk.percent > 90:
+        recommendation = "Critical: Disk storage logic is near capacity."
+    else:
+        recommendation = "System running normally. Resources are fully optimized."
+
     if available > 1 * 1024**3:
         status = "Healthy (High usage mostly cached)" if mem.percent > 80 else "System is using RAM efficiently"
     elif available < 500 * 1024**2:
@@ -59,5 +95,11 @@ def get_system_stats():
             "percent": disk.percent,
             "used": disk.used,
             "total": disk.total
-        }
+        },
+        "network": {
+            "upload_speed": upload_speed,
+            "download_speed": download_speed
+        },
+        "health_score": round(health_score, 0),
+        "recommendation": recommendation
     }

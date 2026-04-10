@@ -1,8 +1,17 @@
 import psutil
+import time
+
+# Initialize CPU measurement globally before API starts
+psutil.cpu_percent(interval=None)
 
 def get_system_stats():
     # interval=None calculates CPU utilization since last call
     cpu_percent = psutil.cpu_percent(interval=None)
+    
+    # Fallback to prevent 0.0% artifacts due to rapid concurrent API polling
+    if cpu_percent <= 0.0:
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
     
@@ -22,9 +31,18 @@ def get_system_stats():
     else:
         status = "Moderate usage"
         
+    # Intelligence Logic for CPU
+    if cpu_percent < 5:
+        cpu_status = "System is idle"
+    elif cpu_percent > 80:
+        cpu_status = "High load detected"
+    else:
+        cpu_status = "Normal usage"
+        
     return {
         "cpu": {
-            "percent": cpu_percent
+            "percent": cpu_percent,
+            "status": cpu_status
         },
         "memory": {
             "total": total,

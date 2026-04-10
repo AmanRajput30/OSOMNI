@@ -1,5 +1,5 @@
 // Configuration
-const REFRESH_RATE = 2000; // 2 seconds
+const REFRESH_RATE = 1500; // 1.5 seconds
 const CPU_WARN = 50;
 const CPU_CRIT = 80;
 const MEM_WARN = 60;
@@ -130,7 +130,10 @@ async function fetchProcesses() {
 function updateSystemUI(data) {
     // CPU
     const cCpu = data.cpu.percent;
-    eValCpu.textContent = `${cCpu}%`;
+    eValCpu.textContent = `CPU Usage: ${cCpu}%`;
+    const ecStatus = document.getElementById('cpu-status');
+    if (ecStatus) ecStatus.textContent = `Status: ${data.cpu.status}`;
+    
     eBarCpu.style.width = `${cCpu}%`;
     eBarCpu.className = `progress-fill ${getColorClass(cCpu, 'cpu')}`;
     updateGraph(cpuHistory, cCpu, eGraphCpu, getColorClass(cCpu, 'cpu'));
